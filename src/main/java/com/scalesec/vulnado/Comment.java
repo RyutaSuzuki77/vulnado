@@ -33,6 +33,39 @@ public class Comment {
     }
   }
 
+  // ⚠️ INTENTIONALLY VULNERABLE (educational): this method builds the SQL query
+  // by concatenating untrusted input directly into the statement, so a crafted
+  // `keyword` can inject arbitrary SQL (e.g. `' OR '1'='1` or a UNION-based attack).
+  // See exercises/01-sql-injection.md. Do NOT copy this pattern into real code —
+  // the safe version uses a PreparedStatement with bound parameters.
+  public static List<Comment> search(String keyword) {
+    Statement stmt = null;
+    List<Comment> comments = new ArrayList();
+    try {
+      Connection cxn = Postgres.connection();
+      stmt = cxn.createStatement();
+
+      // Vulnerable: user-controlled `keyword` is concatenated straight into the query.
+      String query = "select * from comments where body like '%" + keyword + "%'";
+      System.out.println(query);
+      ResultSet rs = stmt.executeQuery(query);
+      while (rs.next()) {
+        String id = rs.getString("id");
+        String username = rs.getString("username");
+        String body = rs.getString("body");
+        Timestamp created_on = rs.getTimestamp("created_on");
+        Comment c = new Comment(id, username, body, created_on);
+        comments.add(c);
+      }
+      cxn.close();
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.err.println(e.getClass().getName()+": "+e.getMessage());
+    } finally {
+      return comments;
+    }
+  }
+
   public static List<Comment> fetch_all() {
     Statement stmt = null;
     List<Comment> comments = new ArrayList();

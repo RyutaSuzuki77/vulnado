@@ -20,6 +20,17 @@ public class CommentsController {
     return Comment.fetch_all();
   }
 
+  // ⚠️ INTENTIONALLY VULNERABLE (educational): the `q` query parameter is passed
+  // unsanitized into a string-concatenated SQL query. Example attack:
+  //   GET /comments/search?q=%25%27%20UNION%20SELECT%20user_id%2Cusername%2Cpassword%2Cnow()%20FROM%20users--
+  // See exercises/01-sql-injection.md.
+  @CrossOrigin(origins = "*")
+  @RequestMapping(value = "/comments/search", method = RequestMethod.GET, produces = "application/json")
+  List<Comment> searchComments(@RequestHeader(value="x-auth-token") String token, @RequestParam("q") String q) {
+    User.assertAuth(secret, token);
+    return Comment.search(q);
+  }
+
   @CrossOrigin(origins = "*")
   @RequestMapping(value = "/comments", method = RequestMethod.POST, produces = "application/json", consumes = "application/json")
   Comment createComment(@RequestHeader(value="x-auth-token") String token, @RequestBody CommentRequest input) {
